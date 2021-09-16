@@ -7,8 +7,8 @@ import (
 )
 
 type Person struct {
-	Name string
-	Age  int
+	Name string `jscore:"name"`
+	Age  int    `jscore:"age"`
 }
 
 func main() {
@@ -24,12 +24,22 @@ func main() {
 	obj.Set(ctx, "test", jscore.NewObject(ctx).Value())
 	fmt.Println(obj.Has(ctx, "test"), obj.Get(ctx, "test").String(ctx), obj.Get(ctx, "test").Type(ctx))
 
-	script := `12.34`
-	corr := jscore.CheckScriptSyntax(ctx, script)
-	fmt.Println("check:", corr)
-	if corr {
+	obj.Set(ctx, "person", jscore.NewGoObject(ctx, &Person{"Aoife", 17}).Value())
+	fmt.Println("person:", obj.Has(ctx, "person"), obj.Get(ctx, "person").String(ctx), obj.Get(ctx, "person").Type(ctx))
+	script := `person.age`
+	if jscore.CheckScriptSyntax(ctx, script) {
 		r := jscore.EvaluateScript(ctx, script)
-		fmt.Println("result:", r.String(ctx), r.Type(ctx))
+		fmt.Println("result:", r.Interface(ctx))
+	} else {
+		panic("syntax error")
+	}
+
+	script = `[1, 2, 3]`
+	if jscore.CheckScriptSyntax(ctx, script) {
+		r := jscore.EvaluateScript(ctx, script)
+		fmt.Println("result:", r.Interface(ctx), r.Object(ctx).Slice(ctx), r.Type(ctx))
+	} else {
+		panic("syntax error")
 	}
 
 	obj = jscore.NewObject(ctx)
@@ -40,6 +50,10 @@ func main() {
 	fmt.Printf("%v %T\n", r, r)
 
 	obj = jscore.NewGoObject(ctx, &Person{"Maeve", 18})
+	r = obj.Value().Interface(ctx)
+	fmt.Printf("%v %T\n", r, r)
+
+	obj = jscore.NewGoObject(ctx, &Person{"Moira", 19})
 	r = obj.Value().Interface(ctx)
 	fmt.Printf("%v %T\n", r, r)
 
