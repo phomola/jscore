@@ -42,4 +42,8 @@ func main() {
 	obj = jscore.NewGoObject(ctx, &Person{"Maeve", 18})
 	r = obj.Value().Interface(ctx)
 	fmt.Printf("%v %T\n", r, r)
+
+	obj = jscore.NewArray(ctx, jscore.NewNumber(ctx, 1234), jscore.NewString(ctx, "Test"))
+	r = obj.Value().Interface(ctx)
+	fmt.Printf("%v %T\n", r, r)
 }
