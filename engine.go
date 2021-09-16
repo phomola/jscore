@@ -29,7 +29,7 @@ func releaseJSString(s C.JSStringRef) {
 type Context interface {
 	jsContext() C.JSContextRef
 	// GlobalObject returns the global object associated with the context.
-	GlobalObject() *Object
+	GlobalObject() Object
 }
 
 // GlobalContext is a global JS context.
@@ -38,21 +38,21 @@ type GlobalContext struct {
 }
 
 // NewGlobalContext creates a new global JS context.
-func NewGlobalContext() *GlobalContext {
-	return &GlobalContext{C.JSGlobalContextCreate(nil)}
+func NewGlobalContext() GlobalContext {
+	return GlobalContext{C.JSGlobalContextCreate(nil)}
 }
 
-func (c *GlobalContext) jsContext() C.JSContextRef {
+func (c GlobalContext) jsContext() C.JSContextRef {
 	return C.JSContextRef(c.ctx)
 }
 
 // GlobalObject returns the global object associated with the context.
-func (c *GlobalContext) GlobalObject() *Object {
-	return &Object{C.JSContextGetGlobalObject(c.ctx)}
+func (c GlobalContext) GlobalObject() Object {
+	return Object{C.JSContextGetGlobalObject(c.ctx)}
 }
 
 // Release releases the context.
-func (c *GlobalContext) Release() {
+func (c GlobalContext) Release() {
 	C.JSGlobalContextRelease(c.ctx)
 }
 
@@ -64,15 +64,25 @@ func CheckScriptSyntax(ctx Context, script string) bool {
 }
 
 // EvaluateScript evaluates the provided script.
-func EvaluateScript(ctx Context, script string) *Value {
+func EvaluateScript(ctx Context, script string) Value {
 	s := createJSString(script)
 	defer releaseJSString(s)
 	r := C.JSEvaluateScript(ctx.jsContext(), s, nil, nil, 1, nil)
-	return &Value{r}
+	return Value{r}
 }
 
 // Type is a JS type.
 type Type int
+
+const (
+	Undefined Type = iota
+	Null
+	Boolean
+	Number
+	String
+	JSObject
+	Symbol
+)
 
 // String returns the textual representation of the type.
 func (t Type) String() string {
@@ -95,16 +105,6 @@ func (t Type) String() string {
 		return fmt.Sprint("unknown JS type: ", int(t))
 	}
 }
-
-const (
-	Undefined Type = iota
-	Null
-	Boolean
-	Number
-	String
-	JSObject
-	Symbol
-)
 
 //export jsObjectInitialize
 func jsObjectInitialize(ctx C.JSContextRef, obj C.JSObjectRef) {
@@ -141,46 +141,46 @@ type Object struct {
 }
 
 // NewObject creates a new JS object.
-func NewObject(ctx Context) *Object {
-	return &Object{C.JSObjectMake(ctx.jsContext(), emptyJSClass, nil)}
+func NewObject(ctx Context) Object {
+	return Object{C.JSObjectMake(ctx.jsContext(), emptyJSClass, nil)}
 }
 
 // NewGoObject creates a new JS object that wraps a Go object.
-func NewGoObject(ctx Context, data interface{}) *Object {
-	return &Object{C.JSObjectMake(ctx.jsContext(), goJSClass, unsafe.Pointer(cgo.NewHandle(data)))}
+func NewGoObject(ctx Context, data interface{}) Object {
+	return Object{C.JSObjectMake(ctx.jsContext(), goJSClass, unsafe.Pointer(cgo.NewHandle(data)))}
 }
 
 // NewArray creates a JS array.
-func NewArray(ctx Context, values ...*Value) *Object {
+func NewArray(ctx Context, values ...Value) Object {
 	vals := make([]C.JSValueRef, len(values))
 	for i, v := range values {
 		vals[i] = v.val
 	}
 	ptr := (*C.JSValueRef)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&vals)).Data))
-	return &Object{C.JSObjectMakeArray(ctx.jsContext(), C.ulong(len(vals)), ptr, nil)}
+	return Object{C.JSObjectMakeArray(ctx.jsContext(), C.ulong(len(vals)), ptr, nil)}
 }
 
 // Value returns the object as a JS value.
-func (o *Object) Value() *Value {
-	return &Value{(C.JSValueRef)(unsafe.Pointer(o.obj))}
+func (o Object) Value() Value {
+	return Value{(C.JSValueRef)(unsafe.Pointer(o.obj))}
 }
 
 // Has checks whether the object has a property with the given name.
-func (o *Object) Has(ctx Context, propertyName string) bool {
+func (o Object) Has(ctx Context, propertyName string) bool {
 	n := createJSString(propertyName)
 	defer releaseJSString(n)
 	return bool(C.JSObjectHasProperty(ctx.jsContext(), o.obj, n))
 }
 
 // Get returns the property with the given name.
-func (o *Object) Get(ctx Context, propertyName string) *Value {
+func (o Object) Get(ctx Context, propertyName string) Value {
 	n := createJSString(propertyName)
 	defer releaseJSString(n)
-	return &Value{C.JSObjectGetProperty(ctx.jsContext(), o.obj, n, nil)}
+	return Value{C.JSObjectGetProperty(ctx.jsContext(), o.obj, n, nil)}
 }
 
 // Set sets the property with the given name.
-func (o *Object) Set(ctx Context, propertyName string, value *Value) {
+func (o Object) Set(ctx Context, propertyName string, value Value) {
 	n := createJSString(propertyName)
 	defer releaseJSString(n)
 	C.JSObjectSetProperty(ctx.jsContext(), o.obj, n, value.val, 0, nil)
@@ -192,46 +192,46 @@ type Value struct {
 }
 
 // NewNull creates a new null JS value.
-func NewNull(ctx Context) *Value {
-	return &Value{C.JSValueMakeNull(ctx.jsContext())}
+func NewNull(ctx Context) Value {
+	return Value{C.JSValueMakeNull(ctx.jsContext())}
 }
 
 // NewNumber creates a new JS number.
-func NewNumber(ctx Context, x float64) *Value {
-	return &Value{C.JSValueMakeNumber(ctx.jsContext(), C.double(x))}
+func NewNumber(ctx Context, x float64) Value {
+	return Value{C.JSValueMakeNumber(ctx.jsContext(), C.double(x))}
 }
 
 // NewBoolean creates a new JS boolean.
-func NewBoolean(ctx Context, b bool) *Value {
-	return &Value{C.JSValueMakeBoolean(ctx.jsContext(), C.bool(b))}
+func NewBoolean(ctx Context, b bool) Value {
+	return Value{C.JSValueMakeBoolean(ctx.jsContext(), C.bool(b))}
 }
 
 // NewString creates a new JS string.
-func NewString(ctx Context, str string) *Value {
+func NewString(ctx Context, str string) Value {
 	s := createJSString(str)
 	defer releaseJSString(s)
-	return &Value{C.JSValueMakeString(ctx.jsContext(), s)}
+	return Value{C.JSValueMakeString(ctx.jsContext(), s)}
 }
 
 // NewSymbol creates a new JS symbol.
-func NewSymbol(ctx Context, str string) *Value {
+func NewSymbol(ctx Context, str string) Value {
 	s := createJSString(str)
 	defer releaseJSString(s)
-	return &Value{C.JSValueMakeSymbol(ctx.jsContext(), s)}
+	return Value{C.JSValueMakeSymbol(ctx.jsContext(), s)}
 }
 
 // Protect protects the JS value from being garbage collected.
-func (v *Value) Protect(ctx Context) {
+func (v Value) Protect(ctx Context) {
 	C.JSValueProtect(ctx.jsContext(), v.val)
 }
 
 // Unprotect unprotects the JS value from being garbage collected.
-func (v *Value) Unprotect(ctx Context) {
+func (v Value) Unprotect(ctx Context) {
 	C.JSValueUnprotect(ctx.jsContext(), v.val)
 }
 
 // Type returns the type of the JS value.
-func (v *Value) Type(ctx Context) Type {
+func (v Value) Type(ctx Context) Type {
 	t := C.JSValueGetType(ctx.jsContext(), v.val)
 	switch t {
 	case C.kJSTypeUndefined:
@@ -254,22 +254,22 @@ func (v *Value) Type(ctx Context) Type {
 }
 
 // Number returns the JS value as a number.
-func (v *Value) Number(ctx Context) float64 {
+func (v Value) Number(ctx Context) float64 {
 	return float64(C.JSValueToNumber(ctx.jsContext(), v.val, nil))
 }
 
 // Boolean returns the JS value as a boolean.
-func (v *Value) Boolean(ctx Context) bool {
+func (v Value) Boolean(ctx Context) bool {
 	return bool(C.JSValueToBoolean(ctx.jsContext(), v.val))
 }
 
 // Object returns the JS value as an object.
-func (v *Value) Object(ctx Context) *Object {
-	return &Object{C.JSValueToObject(ctx.jsContext(), v.val, nil)}
+func (v Value) Object(ctx Context) Object {
+	return Object{C.JSValueToObject(ctx.jsContext(), v.val, nil)}
 }
 
 // String returns the textual representation of the JS value.
-func (v *Value) String(ctx Context) string {
+func (v Value) String(ctx Context) string {
 	s := C.JSValueToStringCopy(ctx.jsContext(), v.val, nil)
 	defer C.JSStringRelease(s)
 	maxLen := C.JSStringGetMaximumUTF8CStringSize(s)
@@ -282,7 +282,7 @@ func (v *Value) String(ctx Context) string {
 // Interface returns the JS value as an interface{}.
 // If the value is a wrapped Go object, then the wrapper object is returned.
 // For other JS objects, a map of type map[string]interface{} is returned.
-func (v *Value) Interface(ctx Context) interface{} {
+func (v Value) Interface(ctx Context) interface{} {
 	t := v.Type(ctx)
 	switch t {
 	case Undefined:
@@ -307,7 +307,7 @@ func (v *Value) Interface(ctx Context) interface{} {
 			m := make(map[string]interface{}, l)
 			for i := 0; i < l; i++ {
 				s := C.JSPropertyNameArrayGetNameAtIndex(names, C.ulong(i))
-				v := &Value{C.JSObjectGetProperty(ctx.jsContext(), o, s, nil)}
+				v := Value{C.JSObjectGetProperty(ctx.jsContext(), o, s, nil)}
 				maxLen := C.JSStringGetMaximumUTF8CStringSize(s)
 				cptr := (*C.char)(C.malloc(maxLen))
 				defer C.free(unsafe.Pointer(cptr))
