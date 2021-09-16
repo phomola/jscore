@@ -6,6 +6,11 @@ import (
 	"github.com/phomola/jscore"
 )
 
+type Person struct {
+	Name string
+	Age  int
+}
+
 func main() {
 	ctx := jscore.NewGlobalContext()
 	defer ctx.Release()
@@ -26,4 +31,15 @@ func main() {
 		r := jscore.EvaluateScript(ctx, script)
 		fmt.Println("result:", r.String(ctx), r.Type(ctx))
 	}
+
+	obj = jscore.NewObject(ctx)
+	obj.Set(ctx, "p1", jscore.NewNumber(ctx, 1))
+	obj.Set(ctx, "p2", jscore.NewNumber(ctx, 2))
+	obj.Set(ctx, "p3", jscore.NewNumber(ctx, 3))
+	r := obj.Value().Interface(ctx)
+	fmt.Printf("%v %T\n", r, r)
+
+	obj = jscore.NewGoObject(ctx, &Person{"Maeve", 18})
+	r = obj.Value().Interface(ctx)
+	fmt.Printf("%v %T\n", r, r)
 }

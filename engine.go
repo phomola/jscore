@@ -280,6 +280,8 @@ func (v *Value) String(ctx Context) string {
 }
 
 // Interface returns the JS value as an interface{}.
+// If the value is a wrapped Go object, then the wrapper object is returned.
+// For other JS objects, a map of type map[string]interface{} is returned.
 func (v *Value) Interface(ctx Context) interface{} {
 	t := v.Type(ctx)
 	switch t {
@@ -294,7 +296,27 @@ func (v *Value) Interface(ctx Context) interface{} {
 	case String:
 		return v.String(ctx)
 	case JSObject:
-		return v.Object(ctx)
+		o := C.JSValueToObject(ctx.jsContext(), v.val, nil)
+		p := C.JSObjectGetPrivate(o)
+		if p != nil {
+			return cgo.Handle(p).Value()
+		} else {
+			names := C.JSObjectCopyPropertyNames(ctx.jsContext(), o)
+			defer C.JSPropertyNameArrayRelease(names)
+			l := int(C.JSPropertyNameArrayGetCount(names))
+			m := make(map[string]interface{}, l)
+			for i := 0; i < l; i++ {
+				s := C.JSPropertyNameArrayGetNameAtIndex(names, C.ulong(i))
+				v := &Value{C.JSObjectGetProperty(ctx.jsContext(), o, s, nil)}
+				maxLen := C.JSStringGetMaximumUTF8CStringSize(s)
+				cptr := (*C.char)(C.malloc(maxLen))
+				defer C.free(unsafe.Pointer(cptr))
+				C.JSStringGetUTF8CString(s, cptr, maxLen)
+				name := C.GoString(cptr)
+				m[name] = v.Interface(ctx)
+			}
+			return m
+		}
 	case Symbol:
 		panic("JS value is a symbol")
 	default:
