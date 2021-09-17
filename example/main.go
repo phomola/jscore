@@ -6,10 +6,12 @@ import (
 	"github.com/phomola/jscore"
 )
 
-type Person struct {
+type person struct {
 	Name string `jscore:"name"`
 	Age  int    `jscore:"age"`
 }
+
+func (p *person) String() string { return fmt.Sprintf("%s/%d", p.Name, p.Age) }
 
 func main() {
 	ctx := jscore.NewGlobalContext()
@@ -24,7 +26,7 @@ func main() {
 	obj.Set(ctx, "test", jscore.NewObject(ctx).Value())
 	fmt.Println(obj.Has(ctx, "test"), obj.Get(ctx, "test").String(ctx), obj.Get(ctx, "test").Type(ctx))
 
-	obj.Set(ctx, "person", jscore.NewGoObject(ctx, &Person{"Aoife", 17}).Value())
+	obj.Set(ctx, "person", jscore.NewGoObject(ctx, &person{"Aoife", 17}).Value())
 	fmt.Println("person:", obj.Has(ctx, "person"), obj.Get(ctx, "person").String(ctx), obj.Get(ctx, "person").Type(ctx))
 	script := `person.age`
 	if jscore.CheckScriptSyntax(ctx, script) {
@@ -34,7 +36,7 @@ func main() {
 		panic("syntax error")
 	}
 
-	script = `[1, 2, 3]`
+	script = `[1, 2, 3, person]`
 	if jscore.CheckScriptSyntax(ctx, script) {
 		r := jscore.EvaluateScript(ctx, script)
 		fmt.Println("result:", r.Interface(ctx), r.Object(ctx).Slice(ctx), r.Type(ctx))
@@ -49,11 +51,11 @@ func main() {
 	r := obj.Value().Interface(ctx)
 	fmt.Printf("%v %T\n", r, r)
 
-	obj = jscore.NewGoObject(ctx, &Person{"Maeve", 18})
+	obj = jscore.NewGoObject(ctx, &person{"Maeve", 18})
 	r = obj.Value().Interface(ctx)
 	fmt.Printf("%v %T\n", r, r)
 
-	obj = jscore.NewGoObject(ctx, &Person{"Moira", 19})
+	obj = jscore.NewGoObject(ctx, &person{"Moira", 19})
 	r = obj.Value().Interface(ctx)
 	fmt.Printf("%v %T\n", r, r)
 
