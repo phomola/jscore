@@ -1,3 +1,6 @@
+// Jscore is a Go wrapper around JavaScriptCore.
+// Cgo is used a lot throughout the code.
+// It uses reflection to expose Go objects in JS code.
 package jscore
 
 import (
