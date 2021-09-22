@@ -26,13 +26,15 @@ func NewObject(ctx Context) Object {
 func NewGoObject(ctx Context, data interface{}) Object {
 	t := reflect.TypeOf(data)
 	if t.Kind() != reflect.Ptr {
-		panic("Go object wrapped by a JS object must be a pointer to a struct")
+		goto panic
 	}
 	t = t.Elem()
 	if t.Kind() != reflect.Struct {
-		panic("Go object wrapped by a JS object must be a pointer to a struct")
+		goto panic
 	}
 	return Object{C.JSObjectMake(ctx.jsContext(), jsClassForType(t), unsafe.Pointer(cgo.NewHandle(data)))}
+panic:
+	panic("Go object wrapped by a JS object must be a pointer to a struct")
 }
 
 // NewArray creates a JS array.
@@ -77,7 +79,7 @@ func (o Object) Set(ctx Context, propertyName string, value Value) {
 }
 
 // Array returns the JS object as a slice.
-func (o Object) Slice(ctx Context) interface{} {
+func (o Object) Slice(ctx Context) []interface{} {
 	var (
 		s []interface{}
 		i int

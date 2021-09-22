@@ -36,6 +36,10 @@ func main() {
 		panic("syntax error")
 	}
 
+	val := jscore.NewValue(ctx, []interface{}{1, 2, 3, "Ivy"})
+	r := val.Interface(ctx)
+	fmt.Printf("value from slice: %v %T\n", r, r)
+
 	script = `[1, 2, 3, person]`
 	if jscore.CheckScriptSyntax(ctx, script) {
 		r := jscore.EvaluateScript(ctx, script)
@@ -48,7 +52,7 @@ func main() {
 	obj.Set(ctx, "p1", jscore.NewNumber(ctx, 1))
 	obj.Set(ctx, "p2", jscore.NewNumber(ctx, 2))
 	obj.Set(ctx, "p3", jscore.NewNumber(ctx, 3))
-	r := obj.Value().Interface(ctx)
+	r = obj.Value().Interface(ctx)
 	fmt.Printf("%v %T\n", r, r)
 
 	obj = jscore.NewGoObject(ctx, &person{"Maeve", 18})

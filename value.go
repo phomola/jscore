@@ -37,9 +37,9 @@ func NewValue(ctx Context, v interface{}) Value {
 	}
 	val := reflect.ValueOf(v)
 	if val.Kind() == reflect.Slice {
-		var s []Value
+		s := make([]Value, val.Len())
 		for i := 0; i < val.Len(); i++ {
-			s = append(s, NewValue(ctx, val.Index(i).Interface()))
+			s[i] = NewValue(ctx, val.Index(i).Interface())
 		}
 		return NewArray(ctx, s...).Value()
 	}
@@ -138,7 +138,7 @@ func (v Value) String(ctx Context) string {
 }
 
 // Interface returns the JS value as an interface{}.
-// If the value is a wrapped Go object, then the wrapper object is returned.
+// If the value is a wrapped Go object, then the wrapped object is returned.
 // For other JS objects, a map of type map[string]interface{} is returned.
 func (v Value) Interface(ctx Context) interface{} {
 	t := v.Type(ctx)
@@ -178,6 +178,6 @@ func (v Value) Interface(ctx Context) interface{} {
 	case Symbol:
 		panic("JS value is a symbol")
 	default:
-		return fmt.Sprint("unknown JS type: ", int(t))
+		panic(fmt.Sprint("unknown JS type: ", int(t)))
 	}
 }
